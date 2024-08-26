@@ -7,12 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func assert(t *testing.T, a,b any) {
-// 	if !reflect.DeepEqual(a,b) {
-// 		t.Errorf("%+v != %+v", a, b)
-// 	}
-// }
-
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
 	buyOrderA := NewOrder(true, 1)
@@ -25,7 +19,7 @@ func TestLimit(t *testing.T) {
 
 	l.DeleteOrder(buyOrderB)
 
-	fmt.Println(l)
+	assert.Equal(t, len(l.Orders), 2)
 }
 
 func TestPlaceLimitOrder(t *testing.T) {
@@ -51,5 +45,37 @@ func TestPlaceMarketOrder(t *testing.T) {
 	buyOrder := NewOrder(true, 10)
 	matches := ob.PlaceMarketOrder(buyOrder)
 
-	fmt.Printf("%+v", matches)
+	assert.Equal(t, len(matches), 1)
+	assert.Equal(t, len(ob.asks), 1)
+	assert.Equal(t, ob.AskTotalVolume(), 10.0)
+	assert.Equal(t, matches[0].Ask, sellOrder)
+	assert.Equal(t, matches[0].Bid, buyOrder)
+	assert.Equal(t, matches[0].SizeFilled, 10.0)
+	assert.Equal(t, matches[0].Price, 10_000.0)
+	assert.Equal(t, buyOrder.IsFilled(), true)
+}
+
+func TestPlaceMarketOrderMultiFilled(t *testing.T) {
+	ob := NewOrderbook()
+
+	buyOrderA := NewOrder(true, 5)
+	buyOrderB := NewOrder(true, 8)
+	buyOrderC := NewOrder(true, 10)
+	buyOrderD := NewOrder(true, 1)
+
+	ob.PlaceLimitOrder(5_000, buyOrderC)
+	ob.PlaceLimitOrder(5_000, buyOrderD)
+	ob.PlaceLimitOrder(9_000, buyOrderB)
+	ob.PlaceLimitOrder(10_000, buyOrderA)
+
+	assert.Equal(t, ob.BidTotalVolume(), 24.0)
+
+	sellOrder := NewOrder(false, 20)
+	matches := ob.PlaceMarketOrder(sellOrder)
+
+	assert.Equal(t, ob.BidTotalVolume(), 4.0)
+	assert.Equal(t, len(matches), 3)
+	assert.Equal(t, len(ob.bids), 1)
+
+	fmt.Printf("Matches: %v\n", matches)
 }
