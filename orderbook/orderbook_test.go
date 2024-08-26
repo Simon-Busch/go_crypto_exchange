@@ -1,4 +1,4 @@
-package main
+package orderbook
 
 import (
 	"fmt"
@@ -31,6 +31,10 @@ func TestPlaceLimitOrder(t *testing.T) {
 	ob.PlaceLimitOrder(10_000, sellOrder)
 	ob.PlaceLimitOrder(9_000, buyOrder)
 	ob.PlaceLimitOrder(9_000, sellOrderb)
+
+	assert.Equal(t, len(ob.orders), 3)
+	assert.Equal(t, ob.orders[sellOrder.ID], sellOrder)
+	assert.Equal(t, ob.orders[sellOrderb.ID], sellOrderb)
 
 	assert.Equal(t, len(ob.asks), 2)
 	assert.Equal(t, len(ob.bids), 1)
@@ -91,4 +95,7 @@ func TestCancelOrder(t *testing.T) {
 	ob.CancelOrder(buyOrder)
 
 	assert.Equal(t, ob.BidTotalVolume(), 0.0)
+
+	_, ok := ob.orders[buyOrder.ID]
+	assert.Equal(t, ok, false)
 }
