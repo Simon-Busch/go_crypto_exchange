@@ -79,3 +79,16 @@ func TestPlaceMarketOrderMultiFilled(t *testing.T) {
 
 	fmt.Printf("Matches: %v\n", matches)
 }
+
+func TestCancelOrder(t *testing.T) {
+	ob := NewOrderbook()
+
+	buyOrder := NewOrder(true, 20)
+	ob.PlaceLimitOrder(10_000, buyOrder)
+
+	assert.Equal(t, ob.BidTotalVolume(), 20.0)
+
+	ob.CancelOrder(buyOrder)
+
+	assert.Equal(t, ob.BidTotalVolume(), 0.0)
+}
