@@ -3,7 +3,15 @@ package main
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+// func assert(t *testing.T, a,b any) {
+// 	if !reflect.DeepEqual(a,b) {
+// 		t.Errorf("%+v != %+v", a, b)
+// 	}
+// }
 
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
@@ -20,17 +28,28 @@ func TestLimit(t *testing.T) {
 	fmt.Println(l)
 }
 
-func TestOrderBook(t *testing.T) {
+func TestPlaceLimitOrder(t *testing.T) {
 	ob := NewOrderbook()
 
-	buyOrderA := NewOrder(true, 100)
-	buyOrderB := NewOrder(true, 2000)
-	ob.PlaceOrder(10_000, buyOrderA)
-	ob.PlaceOrder(12_000, buyOrderB)
+	sellOrder := NewOrder(false, 100)
+	sellOrderb := NewOrder(false, 100)
+	buyOrder := NewOrder(true, 2000)
+	ob.PlaceLimitOrder(10_000, sellOrder)
+	ob.PlaceLimitOrder(9_000, buyOrder)
+	ob.PlaceLimitOrder(9_000, sellOrderb)
 
-	fmt.Printf("%+v \n", ob)
+	assert.Equal(t, len(ob.asks), 2)
+	assert.Equal(t, len(ob.bids), 1)
+}
 
-	for i := 0; i < len(ob.Bids); i++ {
-		fmt.Printf("==> %+v\n",ob.Bids[i])
-	}
+func TestPlaceMarketOrder(t *testing.T) {
+	ob := NewOrderbook()
+
+	sellOrder := NewOrder(false, 20)
+	ob.PlaceLimitOrder(10_000, sellOrder)
+
+	buyOrder := NewOrder(true, 10)
+	matches := ob.PlaceMarketOrder(buyOrder)
+
+	fmt.Printf("%+v", matches)
 }
