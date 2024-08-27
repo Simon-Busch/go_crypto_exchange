@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/Simon-Busch/go_crypto_exchange/orderbook"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,6 +24,20 @@ func main() {
 	e.GET("/book/:market", ex.handleGetBook)
 	e.POST("/order", ex.handlePlacerOrder)
 	e.DELETE("/order/:id", ex.handleCancelOrder)
+
+	client, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+	address := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	balance, err := client.BalanceAt(ctx, address, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(balance)
 
 	e.Start(":4000")
 }
