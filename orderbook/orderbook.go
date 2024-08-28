@@ -175,6 +175,12 @@ func NewOrderbook() *Orderbook {
 	}
 }
 
+// Each market have their own orderbook
+// Market order will never sit in the order book
+// Market order will always be filled at the best available price
+// If no Limit order available, market order will not be filled
+// If the exchange is empty, it doesn't work.
+
 // Market order are always filled at the best available price
 func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 	matches := []Match{}
