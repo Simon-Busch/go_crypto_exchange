@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "context"
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/Simon-Busch/go_crypto_exchange/orderbook"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -43,6 +44,7 @@ type (
 	}
 
 	Order struct {
+		UserID 		int64
 		ID 				int64
 		Price 		float64
 		Size 			float64
@@ -94,88 +96,44 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Add a user
-	pk := "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
-	user := NewUser(pk)
-	user.ID = 11
-	ex.Users[user.ID] = user
+	// Add a user 9
+	pk9 := "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
+	user9 := NewUser(pk9, 9)
+	ex.Users[user9.ID] = user9
+	// Add a user 8
+	pk8 := "dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"
+	user8 := NewUser(pk8, 8)
+	ex.Users[user8.ID] = user8
 
-	fmt.Printf("User: %+v\n", user)
+
+	fmt.Printf("User 9: %+v\n", user9)
+	fmt.Printf("User 8: %+v\n", user8)
+
+	addressStr9 := "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
+	balance9, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr9), nil)
+	addressStr8 := "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
+	balance8, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr8), nil)
+
+	fmt.Printf("User 8  - seller - starting balance: %s\n", balance8)
+	fmt.Printf("User 9 - buyer - starting balance: %s\n", balance9)
+
+
+	// Add Bob
+	bobPK := "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
+	userBob := NewUser(bobPK, 7)
+	ex.Users[userBob.ID] = userBob
+	fmt.Printf("User Bob: %+v\n", userBob)
+
+	addressBob := "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
+	balanceBob, err := client.BalanceAt(context.Background(), common.HexToAddress(addressBob), nil)
+	fmt.Printf("User Bob- starting balance: %s\n", balanceBob)
+
+
 
 
 	e.GET("/book/:market", ex.handleGetBook)
 	e.POST("/order", ex.handlePlaceOrder)
 	e.DELETE("/order/:id", ex.handleCancelOrder)
-
-	// ctx := context.Background()
-	// // Dummy address from anvil
-	// // address := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	// // balance, err := client.BalanceAt(ctx, address, nil)
-	// // if err != nil {
-	// // 	log.Fatal(err)
-	// // }
-	// // fmt.Printf("before balance: %s",balance)
-
-	// // Associated anvil private key
-	// //NB : remove 0x from the private key
-	// privateKey, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// publicKey := privateKey.Public()
-	// publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	// if !ok {
-	// 	log.Fatal("error casting public key to ECDSA")
-	// }
-
-	// fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-
-	// nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// value := big.NewInt(1000000000000000000) // in wei (1 eth)
-	// gasLimit := uint64(21000) // in units
-	// gasPrice, err := client.SuggestGasPrice(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// toAddress := common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
-	// tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil)
-	// fmt.Printf("tx ==> %+v\n", tx)
-
-	// chainID, err := client.NetworkID(context.Background()) // 31337 for localhost / Anvil
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Printf("tx sent ===> %s", signedTx.Hash().Hex())
-
-
-	// if err := client.SendTransaction(context.Background(), signedTx); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// toBalance, err := client.BalanceAt(ctx, toAddress, nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Printf(" after balance: %s\n",toBalance)
-
-	// fromBalance, err := client.BalanceAt(ctx, fromAddress, nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Printf(" from address after balance: %s\n",fromBalance)
 
 	e.Start(":4000")
 }
@@ -193,13 +151,14 @@ func httpErrorHandler(err error, c echo.Context) {
 	c.JSON(code, map[string]any{"msg": msg})
 }
 
-func NewUser(privateKey string) *User {
+func NewUser(privateKey string, id int64) *User {
 	pk, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
 		panic("Impossible to create new user")
 	}
 
 	return &User{
+		ID: 				id,
 		PrivateKey: pk,
 	}
 }
@@ -240,6 +199,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 	for _, limit := range ob.Asks() {
 		for _, order := range limit.Orders {
 			o := Order{
+				UserID: 		order.UserID,
 				ID: 				order.ID,
 				Price: 			limit.Price,
 				Size: 			order.Size,
@@ -253,6 +213,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 	for _, limit := range ob.Bids() {
 		for _, order := range limit.Orders {
 			o := Order{
+				UserID: 		order.UserID,
 				ID: 				order.ID,
 				Price: 			limit.Price,
 				Size: 			order.Size,
@@ -306,7 +267,7 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *orderbook.Order) error {
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
-	
+
 	return nil
 }
 
@@ -363,6 +324,30 @@ func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 
 		amount := big.NewInt(int64(match.SizeFilled))
 		transferETH(ex.Client, fromUser.PrivateKey, toAddress, amount)
+
+
+		// CheckBalances
+		publicKey := fromUser.PrivateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		if !ok {
+			return fmt.Errorf("error casting public key to ECDSA")
+		}
+
+		fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+		fromBalance, err := ex.Client.BalanceAt(context.Background(), fromAddress, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf(" from address after balance: %s\n",fromBalance)
+
+		toBalance, err := ex.Client.BalanceAt(context.Background(), toAddress, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf(" to address after balance: %s\n",toBalance)
+
 	}
 	return nil
 }

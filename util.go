@@ -49,20 +49,6 @@ func transferETH(client *ethclient.Client, fromPrivKey *ecdsa.PrivateKey, to com
 		log.Fatal(err)
 	}
 
-	fromBalance, err := client.BalanceAt(ctx, fromAddress, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf(" from address after balance: %s\n",fromBalance)
-
-	toBalance, err := client.BalanceAt(ctx, to, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf(" to address after balance: %s\n",toBalance)
-
 
 	return client.SendTransaction(ctx, signedTx)
 }
