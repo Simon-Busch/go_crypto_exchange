@@ -306,26 +306,8 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *orderbook.Order) error {
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
-
-	user, ok := ex.Users[order.UserID]
-
-	if !ok {
-		return fmt.Errorf("user not found")
-	}
-
-	fmt.Printf("User in handlePlaceLimitOrder: %+v\n", user)
-
-	exchangePubKey := ex.PrivateKey.Public()
-	publicKeyECDSA, ok := exchangePubKey.(*ecdsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("error casting exchange public key to ECDSA")
-	}
-
-	toAddr := crypto.PubkeyToAddress(*publicKeyECDSA)
-	amount := big.NewInt(int64(order.Size * price))
-
-	// Transfer  user => exchange wallet
-	return transferETH(ex.Client, user.PrivateKey, toAddr, amount)
+	
+	return nil
 }
 
 func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
@@ -358,8 +340,29 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 }
 
 func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
-	// for _, match := range matches {
+	for _, match := range matches {
+		fromUser, ok := ex.Users[match.Ask.UserID]
+		if !ok {
+			return fmt.Errorf("user not found for ask: %d", match.Ask.UserID)
+		}
 
-	// }
+		toUser, ok := ex.Users[match.Bid.UserID]
+		if !ok {
+			return fmt.Errorf("user not found for bid: %d", match.Bid.UserID)
+		}
+
+		toAddress := crypto.PubkeyToAddress(toUser.PrivateKey.PublicKey)
+
+
+		// Only needed for the fees later on
+		// exchangePubKey := ex.PrivateKey.Public()
+		// publicKeyECDSA, ok := exchangePubKey.(*ecdsa.PublicKey)
+		// if !ok {
+		// 	return fmt.Errorf("error casting exchange public key to ECDSA")
+		// }
+
+		amount := big.NewInt(int64(match.SizeFilled))
+		transferETH(ex.Client, fromUser.PrivateKey, toAddress, amount)
+	}
 	return nil
 }
