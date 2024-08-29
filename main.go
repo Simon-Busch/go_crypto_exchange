@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Simon-Busch/go_crypto_exchange/client"
@@ -16,47 +15,83 @@ func main() {
 
 	clt := client.NewClient()
 
-	// Place a bid limit order
-	bidParams := &client.PlaceLimitOrderParams{
-		UserID: 8,
-		Bid:    true,
-		Price:  10_000.0,
-		Size:   1_000.0,
-	}
 
-	go func() {
-		for  {
-			resp, err := clt.PlaceLimitOrder(bidParams)
-
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println("order id => ", resp.OrderID)
-
-			time.Sleep(1 * time.Second)
+	for {
+		limitOrderParams := &client.PlaceOrderParams{
+			UserID: 8,
+			Bid:    false,
+			Price:  10_000.0,
+			Size:   1_000_000.0,
 		}
-	}()
 
-
-	// Place an ask limit order
-	askParams := &client.PlaceLimitOrderParams{
-		UserID: 8,
-		Bid:    false,
-		Price:  8_000.0,
-		Size:   1_000.0,
-	}
-
-	for  {
-		resp, err := clt.PlaceLimitOrder(askParams)
-
+		_, err := clt.PlaceLimitOrder(limitOrderParams)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Println("order id => ", resp.OrderID)
+		marketOrderParams := &client.PlaceOrderParams{
+			UserID: 9,
+			Bid:    true,
+			Size:   500_000.0,
+		}
+
+		_, err = clt.PlaceMarketOrder(marketOrderParams)
+		if err != nil {
+			panic(err)
+		}
+
 		time.Sleep(1 * time.Second)
 	}
+
+
+
+	/********************************
+	* Place limit order bid and ask *
+	*********************************/
+	// Place a bid limit order
+	// bidParams := &client.PlaceOrderParams{
+	// 	UserID: 8,
+	// 	Bid:    true,
+	// 	Price:  10_000.0,
+	// 	Size:   1_000.0,
+	// }
+
+	// go func() {
+	// 	for  {
+	// 		resp, err := clt.PlaceLimitOrder(bidParams)
+
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+
+	// 		fmt.Println("order id => ", resp.OrderID)
+
+	// 		if err := clt.CancelOrder(resp.OrderID); err != nil {
+	// 			panic(err)
+	// 		}
+
+	// 		time.Sleep(1 * time.Second)
+	// 	}
+	// }()
+
+	// // Place an ask limit order
+	// askParams := &client.PlaceOrderParams{
+	// 	UserID: 8,
+	// 	Bid:    false,
+	// 	Price:  8_000.0,
+	// 	Size:   1_000.0,
+	// }
+
+	// for  {
+	// 	resp, err := clt.PlaceLimitOrder(askParams)
+
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	fmt.Println("order id => ", resp.OrderID)
+	// 	time.Sleep(1 * time.Second)
+	// }
 
 	select {}
 }

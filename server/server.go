@@ -101,22 +101,20 @@ func StartServer() {
 	pk9 := "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
 	user9 := NewUser(pk9, 9)
 	ex.Users[user9.ID] = user9
+	addressStr9 := "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
+	balance9, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr9), nil)
+	fmt.Printf("User 9 - buyer - starting balance: %s\n", balance9)
+
+
+
 	// Add a user 8
 	pk8 := "dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"
 	user8 := NewUser(pk8, 8)
 	ex.Users[user8.ID] = user8
-
-
-	fmt.Printf("User 9: %+v\n", user9)
 	fmt.Printf("User 8: %+v\n", user8)
-
-	addressStr9 := "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
-	balance9, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr9), nil)
 	addressStr8 := "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
 	balance8, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr8), nil)
-
 	fmt.Printf("User 8  - seller - starting balance: %s\n", balance8)
-	fmt.Printf("User 9 - buyer - starting balance: %s\n", balance9)
 
 
 	// Add Bob
@@ -239,6 +237,8 @@ func (ex *Exchange) handleCancelOrder(c echo.Context) error {
 	order := ob.Orders[id]
 	ob.CancelOrder(order)
 
+	log.Println("order cancelled => id: ", id)
+
 	return c.JSON(http.StatusOK, map[string]any{"msg": "order cancelled", "id": id})
 }
 
@@ -249,6 +249,7 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 
 	isBid := order.Bid
 
+	totalSizeFilled := 0.0
 	for i := 0 ; i < len(matches); i++ {
 		id := matches[i].Bid.ID
 		if isBid {
@@ -260,7 +261,11 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 			Size: 			match.SizeFilled,
 			ID: 				id,
 		}
+		totalSizeFilled += match.SizeFilled
 	}
+
+	log.Printf("filled MARKET order  => %d | size:[%.2f]", order.ID, totalSizeFilled)
+
 
 	return matches, matchesOrders
 }
@@ -303,12 +308,17 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 
 	// Market orders
 	if placeOrderData.Type == MarketOrder {
-		matches, matchesOrders := ex.handlePlaceMarketOrder(market, order)
+		matches, _ := ex.handlePlaceMarketOrder(market, order)
 
 		if err := ex.handleMatches(matches); err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, map[string]any{"matches": matchesOrders})
+
+		resp := &PlaceOrderResponse{
+			OrderID: order.ID,
+		}
+
+		return c.JSON(http.StatusOK, resp)
 	}
 
 	return c.JSON(http.StatusBadRequest, map[string]any{"msg": "invalid order type"})
@@ -341,26 +351,26 @@ func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 
 
 		// CheckBalances
-		publicKey := fromUser.PrivateKey.Public()
-		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-		if !ok {
-			return fmt.Errorf("error casting public key to ECDSA")
-		}
+		// publicKey := fromUser.PrivateKey.Public()
+		// publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		// if !ok {
+		// 	return fmt.Errorf("error casting public key to ECDSA")
+		// }
 
-		fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-		fromBalance, err := ex.Client.BalanceAt(context.Background(), fromAddress, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
+		// fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+		// fromBalance, err := ex.Client.BalanceAt(context.Background(), fromAddress, nil)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
 
-		fmt.Printf(" from address after balance: %s\n",fromBalance)
+		// fmt.Printf(" from address after balance: %s\n",fromBalance)
 
-		toBalance, err := ex.Client.BalanceAt(context.Background(), toAddress, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
+		// toBalance, err := ex.Client.BalanceAt(context.Background(), toAddress, nil)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
 
-		fmt.Printf(" to address after balance: %s\n",toBalance)
+		// fmt.Printf(" to address after balance: %s\n",toBalance)
 
 	}
 	return nil
@@ -389,7 +399,6 @@ func transferETH(client *ethclient.Client, fromPrivKey *ecdsa.PrivateKey, to com
 
 
 	tx := types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, nil)
-	fmt.Printf("tx ==> %+v\n", tx)
 
 	chainID, err := client.NetworkID(ctx) // 31337 for localhost / Anvil
 	if err != nil {
