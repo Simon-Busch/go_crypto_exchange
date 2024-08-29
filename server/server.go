@@ -129,8 +129,8 @@ func StartServer() {
 
 	e.POST("/order", ex.handlePlaceOrder)
 
-	e.GET("/book/:market/asks", ex.handleGetBestAsk)
-	e.GET("/book/:market/bids ", ex.handleGetBestAsk)
+	// e.GET("/book/:market/asks", ex.handleGetBestAsk)
+	// e.GET("/book/:market/bids ", ex.handleGetBestAsk)
 	e.GET("/book/:market", ex.handleGetBook)
 	e.GET("/book/:market/bestbid", ex.handleGetBestBid)
 	e.GET("/book/:market/bestask", ex.handleGetBestAsk)

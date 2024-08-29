@@ -1,12 +1,68 @@
 package main
 
 import (
-	"time"
 	"fmt"
+	"log"
+	"math"
+	"time"
 
 	"github.com/Simon-Busch/go_crypto_exchange/client"
 	"github.com/Simon-Busch/go_crypto_exchange/server"
 )
+
+var tick = 2 * time.Second
+
+
+func makeMarketSimple(client *client.Client) {
+	ticker := time.NewTicker(tick)
+
+	for {
+		<- ticker.C // more performant than time.Sleep
+
+		bestAsk, err := client.GetBestAsk()
+		if err != nil {
+			log.Println(err)
+		}
+		bestBid, err := client.GetBestBid()
+		if err != nil {
+			log.Println(err)
+		}
+
+		spread := math.Abs(bestBid - bestAsk)
+
+
+		fmt.Println("Exchange Spread => ", spread)
+		fmt.Println("Best ask => ", bestAsk)
+		fmt.Println("Best bid => ", bestBid)
+	}
+}
+
+func seedMarket(c *client.Client) error {
+	ask := &client.PlaceOrderParams{
+		UserID: 8,
+		Bid:    false,
+		Price:  10_000.0,
+		Size:   1_000_000.0,
+	}
+	_, err := c.PlaceLimitOrder(ask)
+	if err != nil {
+		return err
+	}
+
+
+	bid := &client.PlaceOrderParams{
+		UserID: 8,
+		Bid:    true,
+		Price:  9_000.0,
+		Size:   1_000_000.0,
+	}
+	_, err = c.PlaceLimitOrder(bid)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 
 func main() {
@@ -16,65 +72,70 @@ func main() {
 
 	clt := client.NewClient()
 
+	if err := seedMarket(clt); err != nil {
+		panic(err)
+	}
+
+	makeMarketSimple(clt)
 
 	// for {
-		limitOrderParamsA := &client.PlaceOrderParams{
-			UserID: 8,
-			Bid:    false,
-			Price:  10_000.0,
-			Size:   5_000_000.0,
-		}
+	// 	limitOrderParamsA := &client.PlaceOrderParams{
+	// 		UserID: 8,
+	// 		Bid:    false,
+	// 		Price:  10_000.0,
+	// 		Size:   5_000_000.0,
+	// 	}
 
-		_, err := clt.PlaceLimitOrder(limitOrderParamsA)
-		if err != nil {
-			panic(err)
-		}
+	// 	_, err := clt.PlaceLimitOrder(limitOrderParamsA)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-		limitOrderParamsB := &client.PlaceOrderParams{
-			UserID: 9,
-			Bid:    false,
-			Price:  9_000.0,
-			Size:   500_000.0,
-		}
+	// 	limitOrderParamsB := &client.PlaceOrderParams{
+	// 		UserID: 9,
+	// 		Bid:    false,
+	// 		Price:  9_000.0,
+	// 		Size:   500_000.0,
+	// 	}
 
-		_, err = clt.PlaceLimitOrder(limitOrderParamsB)
-		if err != nil {
-			panic(err)
-		}
+	// 	_, err = clt.PlaceLimitOrder(limitOrderParamsB)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-		buyLimitOrder := &client.PlaceOrderParams{
-			UserID: 7,
-			Bid:    true,
-			Price:  11_000.0,
-			Size:   500_000.0,
-		}
-		_, err = clt.PlaceLimitOrder(buyLimitOrder)
-		if err != nil {
-			panic(err)
-		}
+	// 	buyLimitOrder := &client.PlaceOrderParams{
+	// 		UserID: 7,
+	// 		Bid:    true,
+	// 		Price:  11_000.0,
+	// 		Size:   500_000.0,
+	// 	}
+	// 	_, err = clt.PlaceLimitOrder(buyLimitOrder)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-		marketOrderParams := &client.PlaceOrderParams{
-			UserID: 7,
-			Bid:    true,
-			Size:   1_000_000.0,
-		}
+	// 	marketOrderParams := &client.PlaceOrderParams{
+	// 		UserID: 7,
+	// 		Bid:    true,
+	// 		Size:   1_000_000.0,
+	// 	}
 
-		_, err = clt.PlaceMarketOrder(marketOrderParams)
-		if err != nil {
-			panic(err)
-		}
+	// 	_, err = clt.PlaceMarketOrder(marketOrderParams)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-	bestBidPrice, err := clt.GetBestBid()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("best bid price => ", bestBidPrice)
+	// bestBidPrice, err := clt.GetBestBid()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("best bid price => ", bestBidPrice)
 
-	bestAskPrice, err := clt.GetBestAsk()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("best ask price => ", bestAskPrice)
+	// bestAskPrice, err := clt.GetBestAsk()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("best ask price => ", bestAskPrice)
 
 	// 	time.Sleep(1 * time.Second)
 	// }
