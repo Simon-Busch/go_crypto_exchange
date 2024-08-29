@@ -17,22 +17,34 @@ func main() {
 
 
 	for {
-		limitOrderParams := &client.PlaceOrderParams{
+		limitOrderParamsA := &client.PlaceOrderParams{
 			UserID: 8,
 			Bid:    false,
 			Price:  10_000.0,
-			Size:   1_000_000.0,
+			Size:   500_000.0,
 		}
 
-		_, err := clt.PlaceLimitOrder(limitOrderParams)
+		_, err := clt.PlaceLimitOrder(limitOrderParamsA)
+		if err != nil {
+			panic(err)
+		}
+
+		limitOrderParamsB := &client.PlaceOrderParams{
+			UserID: 9,
+			Bid:    false,
+			Price:  9_000.0,
+			Size:   500_000.0,
+		}
+
+		_, err = clt.PlaceLimitOrder(limitOrderParamsB)
 		if err != nil {
 			panic(err)
 		}
 
 		marketOrderParams := &client.PlaceOrderParams{
-			UserID: 9,
+			UserID: 7,
 			Bid:    true,
-			Size:   500_000.0,
+			Size:   1_000_000.0,
 		}
 
 		_, err = clt.PlaceMarketOrder(marketOrderParams)
