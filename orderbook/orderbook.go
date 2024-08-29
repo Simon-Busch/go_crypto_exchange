@@ -198,7 +198,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 			matches = append(matches, limitMatches...)
 
 			if len(limit.Orders) == 0 {
-				ob.clearLimit(true, limit)
+				ob.clearLimit(false, limit)
 			}
 
 		}
@@ -266,6 +266,9 @@ func (ob *Orderbook) clearLimit(bid bool, l *Limit) {
 			}
 		}
 	}
+
+	fmt.Printf("%+v\n", ob.asks)
+	fmt.Printf("Clearing limit  price level [%.2f] \n", l.Price)
 }
 
 func (ob *Orderbook) CancelOrder(o *Order) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/Simon-Busch/go_crypto_exchange/client"
 	"github.com/Simon-Busch/go_crypto_exchange/server"
@@ -16,12 +17,12 @@ func main() {
 	clt := client.NewClient()
 
 
-	for {
+	// for {
 		limitOrderParamsA := &client.PlaceOrderParams{
 			UserID: 8,
 			Bid:    false,
 			Price:  10_000.0,
-			Size:   500_000.0,
+			Size:   5_000_000.0,
 		}
 
 		_, err := clt.PlaceLimitOrder(limitOrderParamsA)
@@ -41,6 +42,17 @@ func main() {
 			panic(err)
 		}
 
+		buyLimitOrder := &client.PlaceOrderParams{
+			UserID: 7,
+			Bid:    true,
+			Price:  11_000.0,
+			Size:   500_000.0,
+		}
+		_, err = clt.PlaceLimitOrder(buyLimitOrder)
+		if err != nil {
+			panic(err)
+		}
+
 		marketOrderParams := &client.PlaceOrderParams{
 			UserID: 7,
 			Bid:    true,
@@ -52,8 +64,20 @@ func main() {
 			panic(err)
 		}
 
-		time.Sleep(1 * time.Second)
+	bestBidPrice, err := clt.GetBestBid()
+	if err != nil {
+		panic(err)
 	}
+	fmt.Println("best bid price => ", bestBidPrice)
+
+	bestAskPrice, err := clt.GetBestAsk()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("best ask price => ", bestAskPrice)
+
+	// 	time.Sleep(1 * time.Second)
+	// }
 
 
 

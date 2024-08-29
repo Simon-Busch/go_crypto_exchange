@@ -127,11 +127,14 @@ func StartServer() {
 	balanceBob, err := client.BalanceAt(context.Background(), common.HexToAddress(addressBob), nil)
 	fmt.Printf("User Bob- starting balance: %s\n", balanceBob)
 
-
-
-
-	e.GET("/book/:market", ex.handleGetBook)
 	e.POST("/order", ex.handlePlaceOrder)
+
+	e.GET("/book/:market/asks", ex.handleGetBestAsk)
+	e.GET("/book/:market/bids ", ex.handleGetBestAsk)
+	e.GET("/book/:market", ex.handleGetBook)
+	e.GET("/book/:market/bestbid", ex.handleGetBestBid)
+	e.GET("/book/:market/bestask", ex.handleGetBestAsk)
+
 	e.DELETE("/order/:id", ex.handleCancelOrder)
 
 	e.Start(":4000")
@@ -224,6 +227,45 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, orderbookData)
+}
+
+
+type PriceResponse struct {
+	Price float64
+}
+
+func (ex *Exchange) handleGetBestBid(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob := ex.orderbooks[market]
+
+	if len(ob.Bids()) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]any{"msg": "no bids available"})
+	}
+
+	bestBidPrice := ob.Bids()[0].Price // They are already sorted so we know this is the best
+
+	pr := &PriceResponse{
+		Price: bestBidPrice,
+	}
+
+	return c.JSON(http.StatusOK, pr)
+}
+
+func (ex *Exchange) handleGetBestAsk(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob := ex.orderbooks[market]
+
+	if len(ob.Asks()) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]any{"msg": "no asks available"})
+	}
+
+	bestAskResponse := ob.Asks()[0].Price // They are already sorted so we know this is the best
+
+	pr := &PriceResponse{
+		Price: bestAskResponse,
+	}
+
+	return c.JSON(http.StatusOK, pr)
 }
 
 func (ex *Exchange) handleCancelOrder(c echo.Context) error {

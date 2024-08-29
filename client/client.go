@@ -31,6 +31,46 @@ func NewClient() *Client {
 	}
 }
 
+func (c *Client) GetBestBid() (float64, error) {
+	e := fmt.Sprintf("%s/book/ETH/bestbid", Endpoint)
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return 0.0, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0.0, err
+	}
+
+	bestBidPrice := &server.PriceResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(bestBidPrice); err != nil {
+		return 0.0, err
+	}
+
+	return bestBidPrice.Price, nil
+}
+
+func (c *Client) GetBestAsk() (float64, error) {
+	e := fmt.Sprintf("%s/book/ETH/bestask", Endpoint)
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return 0.0, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0.0, err
+	}
+
+	bestAskPrice := &server.PriceResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(bestAskPrice); err != nil {
+		return 0.0, err
+	}
+
+	return bestAskPrice.Price, nil
+}
+
 func (c *Client) PlaceMarketOrder(p *PlaceOrderParams) (*server.PlaceOrderResponse, error) {
 	params := &server.PlaceOrderRequest{
 		UserID: p.UserID,
