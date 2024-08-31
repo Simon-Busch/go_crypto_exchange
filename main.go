@@ -41,7 +41,7 @@ func marketOrderPlacer(c *client.Client) {
 		marketBuyOrder := &client.PlaceOrderParams{
 			UserID: 7,
 			Bid:    true,
-			Size:   1000.0,
+			Size:   800.0,
 		}
 
 		marketOrderResp, err := c.PlaceMarketOrder(marketBuyOrder)
@@ -58,6 +58,16 @@ func makeMarketSimple(clt *client.Client) {
 	ticker := time.NewTicker(tick)
 
 	for {
+
+		orders, err := clt.GetOrders(8)
+		if err != nil {
+			log.Println(err)
+		}
+
+		fmt.Printf("===================================\n")
+		fmt.Printf("Orders for user [8] => %+v\n", orders)
+		fmt.Printf("===================================\n")
+
 		bestAsk, err := clt.GetBestAsk()
 		if err != nil {
 			log.Println(err)
@@ -124,7 +134,7 @@ func seedMarket(c *client.Client) error {
 
 
 	bid := &client.PlaceOrderParams{
-		UserID: 9,
+		UserID: 8,
 		Bid:    true,
 		Price:  9_000.0,
 		Size:   1_000_000.0,

@@ -26,9 +26,9 @@ type Order struct {
 
 type Orders []*Order
 
-func (o Orders) Len() int           { return len(o) }
-func (o Orders) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
-func (o Orders) Less(i, j int) bool { return o[i].Timestamp < o[j].Timestamp }
+func (o Orders) Len() int						{ return len(o) }
+func (o Orders) Swap(i, j int)			{ o[i], o[j] = o[j], o[i] }
+func (o Orders) Less(i, j int) bool	{ return o[i].Timestamp < o[j].Timestamp }
 
 func NewOrder(bid bool, size float64, userId int64) *Order {
 	return &Order{

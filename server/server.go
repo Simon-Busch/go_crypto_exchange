@@ -64,11 +64,12 @@ type (
 		Client 					*ethclient.Client
 		PrivateKey 			*ecdsa.PrivateKey // Exchange hot wallet
 		orderbooks			map[Market]*orderbook.Orderbook
-		orders 					map[int64]int64
+		Orders 					map[int64][]*orderbook.Order // map users to his orders
 		Users 					map[int64]*User
 	}
 
 	MatchedOrder struct {
+		UserID 		int64
 		Size 			float64
 		Price 		float64
 		ID 				int64
@@ -105,8 +106,6 @@ func StartServer() {
 	balance9, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr9), nil)
 	fmt.Printf("User 9 - buyer - starting balance: %s\n", balance9)
 
-
-
 	// Add a user 8
 	pk8 := "dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"
 	user8 := NewUser(pk8, 8)
@@ -129,8 +128,7 @@ func StartServer() {
 
 	e.POST("/order", ex.handlePlaceOrder)
 
-	// e.GET("/book/:market/asks", ex.handleGetBestAsk)
-	// e.GET("/book/:market/bids ", ex.handleGetBestAsk)
+	e.GET("/order/:userID", ex.handleGetOrders)
 	e.GET("/book/:market", ex.handleGetBook)
 	e.GET("/book/:market/bestbid", ex.handleGetBestBid)
 	e.GET("/book/:market/bestask", ex.handleGetBestAsk)
@@ -179,8 +177,36 @@ func NewExchange(privateKey string, client *ethclient.Client) (*Exchange, error)
 		PrivateKey: 	privKey,
 		orderbooks: 	orderbooks,
 		Users: 				make(map[int64]*User),
-		orders: 			make(map[int64]int64),
+		Orders: 			make(map[int64][]*orderbook.Order),
 	}, nil
+}
+
+func (ex *Exchange) handleGetOrders(c echo.Context) error {
+	userIDStr := c.Param("userID")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return err
+	}
+
+	orderbookOrders := ex.Orders[int64(userID)]
+
+	fmt.Printf("order book ==> %+v", orderbookOrders)
+
+	orders := make([]Order, len(orderbookOrders))
+
+	for i := 0; i < len(orderbookOrders); i++ {
+		order := Order{
+			ID:    			orderbookOrders[i].ID,
+			UserID: 		orderbookOrders[i].UserID,
+			// Price:     orderbookOrders[i].Limit.Price, // commented because it's a pointer
+			Size:      	orderbookOrders[i].Size,
+			Timestamp: 	orderbookOrders[i].Timestamp,
+			Bid:       	orderbookOrders[i].Bid,
+		}
+		orders[i] = order
+	}
+
+	return c.JSON(http.StatusOK, orders)
 }
 
 
@@ -294,24 +320,32 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	totalSizeFilled := 0.0
 	sumPrice := 0.0
 	for i := 0 ; i < len(matches); i++ {
-		id := matches[i].Bid.ID
+
+		var (
+			match = matches[i]
+			limitUserID = match.Bid.UserID
+			id = match.Bid.ID
+		)
+
 		if isBid {
-			id = matches[i].Ask.ID
+			limitUserID = match.Ask.UserID
+			id = match.Ask.ID
 		}
-		match := matches[i]
+
 		matchesOrders[i] = &MatchedOrder{
+			UserID: 		limitUserID,
 			Price: 			match.Price,
 			Size: 			match.SizeFilled,
 			ID: 				id,
 		}
+
 		totalSizeFilled += match.SizeFilled
 		sumPrice += match.Price
 	}
 
 	avgPrice := sumPrice / float64(len(matches))
 
-	log.Printf("filled MARKET order  => %d | size:[%.2f] | avg buy price [%.2f]", order.ID, totalSizeFilled, avgPrice)
-
+	log.Printf("filled MARKET order  => %d | size:[%.2f] | avg price [%.2f]", order.ID, totalSizeFilled, avgPrice)
 
 	return matches, matchesOrders
 }
@@ -320,7 +354,10 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *o
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
 
-	log.Printf("new LIMIT order => type: [%t] || price[%.2f] || size [%.2f]", order.Bid, order.Limit.Price, order.Size)
+	// Keep track of the user's orders
+	ex.Orders[order.UserID] = append(ex.Orders[order.UserID], order)
+
+	log.Printf("new LIMIT order => type: [%t] || price[%.2f] || size [%.2f] || userID [%d]", order.Bid, order.Limit.Price, order.Size, order.UserID)
 
 	return nil
 }
@@ -360,12 +397,44 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 			return err
 		}
 
+		// // Delete the order(s) of the user when filled
+		// for _, matchedOrder := range matchedOrders {
+		// 	userOrders := ex.Orders[matchedOrder.UserID]
+		// 	for i:= 0; i < len(userOrders); i++ {
+
+		// 		if matchedOrder.ID == userOrders[i].ID {
+		// 			// if the size is 0 // if filled we can delete the order
+		// 			if userOrders[i].IsFilled() {
+		// 				fmt.Printf("Deleting ........... => %+v\n", userOrders[i])
+
+		// 				// Delete the order from  this order
+		// 				if matchedOrder.ID == userOrders[i].ID {
+		// 					userOrders[i] = userOrders[len(userOrders)-1]
+		// 					userOrders = userOrders[:len(userOrders)-1]
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		for _, userOrders := range ex.Orders {
+			for i := 0; i < len(userOrders); i++ {
+				if userOrders[i].IsFilled() {
+					fmt.Printf("==========================>  %+v\n", userOrders[i])
+					userOrders[i] = userOrders[len(userOrders)-1]
+					userOrders = userOrders[:len(userOrders)-1]
+				}
+			}
+		}
+
+
 		resp := &PlaceOrderResponse{
 			OrderID: order.ID,
 		}
 
 		return c.JSON(http.StatusOK, resp)
 	}
+
 
 	return c.JSON(http.StatusBadRequest, map[string]any{"msg": "invalid order type"})
 }
