@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"sync"
 
 	"net/http"
 	"strconv"
@@ -62,6 +63,7 @@ type (
 
 	Exchange struct {
 		Client 					*ethclient.Client
+		mu 							sync.RWMutex
 		PrivateKey 			*ecdsa.PrivateKey // Exchange hot wallet
 		orderbooks			map[Market]*orderbook.Orderbook
 		Orders 					map[int64][]*orderbook.Order // map users to his orders
@@ -178,7 +180,13 @@ func NewExchange(privateKey string, client *ethclient.Client) (*Exchange, error)
 		orderbooks: 	orderbooks,
 		Users: 				make(map[int64]*User),
 		Orders: 			make(map[int64][]*orderbook.Order),
+		mu: 					sync.RWMutex{},
 	}, nil
+}
+
+type GetOrdersResponse struct {
+	Asks []Order
+	Bids []Order
 }
 
 func (ex *Exchange) handleGetOrders(c echo.Context) error {
@@ -188,9 +196,12 @@ func (ex *Exchange) handleGetOrders(c echo.Context) error {
 		return err
 	}
 
+	ex.mu.RLock()
 	orderbookOrders := ex.Orders[int64(userID)]
-
-	fmt.Printf("order book ==> %+v", orderbookOrders)
+	orderResp := &GetOrdersResponse{
+		Asks: []Order{},
+		Bids: []Order{},
+	}
 
 	orders := make([]Order, len(orderbookOrders))
 
@@ -198,15 +209,21 @@ func (ex *Exchange) handleGetOrders(c echo.Context) error {
 		order := Order{
 			ID:    			orderbookOrders[i].ID,
 			UserID: 		orderbookOrders[i].UserID,
-			// Price:     orderbookOrders[i].Limit.Price, // commented because it's a pointer
+			Price:     	orderbookOrders[i].Limit.Price,
 			Size:      	orderbookOrders[i].Size,
 			Timestamp: 	orderbookOrders[i].Timestamp,
 			Bid:       	orderbookOrders[i].Bid,
 		}
 		orders[i] = order
+		if order.Bid {
+			orderResp.Bids = append(orderResp.Bids, order)
+		} else {
+			orderResp.Asks = append(orderResp.Asks, order)
+		}
 	}
+	ex.mu.RUnlock()
 
-	return c.JSON(http.StatusOK, orders)
+	return c.JSON(http.StatusOK, orderResp)
 }
 
 
@@ -347,6 +364,22 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 
 	log.Printf("filled MARKET order  => %d | size:[%.2f] | avg price [%.2f]", order.ID, totalSizeFilled, avgPrice)
 
+	newOrderMap := make(map[int64][]*orderbook.Order)
+
+	ex.mu.Lock()
+	for userID, orderbookOrders := range ex.Orders {
+		for i := 0 ; i < len(orderbookOrders); i++ {
+			// If the order is not filled we place in the map copy
+			// -> the size of the order is 0
+			if !orderbookOrders[i].IsFilled() {
+				newOrderMap[userID] = append(newOrderMap[userID], orderbookOrders[i])
+			}
+		}
+	}
+
+	ex.Orders = newOrderMap
+	ex.mu.Unlock()
+
 	return matches, matchesOrders
 }
 
@@ -355,7 +388,9 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *o
 	ob.PlaceLimitOrder(price, order)
 
 	// Keep track of the user's orders
+	ex.mu.Lock()
 	ex.Orders[order.UserID] = append(ex.Orders[order.UserID], order)
+	ex.mu.Unlock()
 
 	log.Printf("new LIMIT order => type: [%t] || price[%.2f] || size [%.2f] || userID [%d]", order.Bid, order.Limit.Price, order.Size, order.UserID)
 
@@ -395,36 +430,6 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 
 		if err := ex.handleMatches(matches); err != nil {
 			return err
-		}
-
-		// // Delete the order(s) of the user when filled
-		// for _, matchedOrder := range matchedOrders {
-		// 	userOrders := ex.Orders[matchedOrder.UserID]
-		// 	for i:= 0; i < len(userOrders); i++ {
-
-		// 		if matchedOrder.ID == userOrders[i].ID {
-		// 			// if the size is 0 // if filled we can delete the order
-		// 			if userOrders[i].IsFilled() {
-		// 				fmt.Printf("Deleting ........... => %+v\n", userOrders[i])
-
-		// 				// Delete the order from  this order
-		// 				if matchedOrder.ID == userOrders[i].ID {
-		// 					userOrders[i] = userOrders[len(userOrders)-1]
-		// 					userOrders = userOrders[:len(userOrders)-1]
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// }
-
-		for _, userOrders := range ex.Orders {
-			for i := 0; i < len(userOrders); i++ {
-				if userOrders[i].IsFilled() {
-					fmt.Printf("==========================>  %+v\n", userOrders[i])
-					userOrders[i] = userOrders[len(userOrders)-1]
-					userOrders = userOrders[:len(userOrders)-1]
-				}
-			}
 		}
 
 

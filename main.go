@@ -16,8 +16,6 @@ const (
 
 var (
 	tick = 2 * time.Second
-	myAsks = make(map[float64]int64)
-	myBids = make(map[float64]int64)
 )
 
 func marketOrderPlacer(c *client.Client) {
@@ -59,14 +57,14 @@ func makeMarketSimple(clt *client.Client) {
 
 	for {
 
-		orders, err := clt.GetOrders(8)
+		_, err := clt.GetOrders(8)
 		if err != nil {
 			log.Println(err)
 		}
 
-		fmt.Printf("===================================\n")
-		fmt.Printf("Orders for user [8] => %+v\n", orders)
-		fmt.Printf("===================================\n")
+		// fmt.Printf("===================================\n")
+		// fmt.Printf("Orders for user [8] => %+v\n", orders)
+		// fmt.Printf("===================================\n")
 
 		bestAsk, err := clt.GetBestAsk()
 		if err != nil {
