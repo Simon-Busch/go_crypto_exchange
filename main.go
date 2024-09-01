@@ -34,6 +34,16 @@ func marketOrderPlacer(c *client.Client) {
 			log.Println(orderResp.OrderID)
 		}
 
+		// otherMarketSellOrder := &client.PlaceOrderParams{
+		// 	UserID: 9,
+		// 	Bid:    false,
+		// 	Size:   5000.0,
+		// }
+
+		// orderResp, err = c.PlaceMarketOrder(otherMarketSellOrder)
+		// if err != nil {
+		// 	log.Println(orderResp.OrderID)
+		// }
 
 		// Buy
 		marketBuyOrder := &client.PlaceOrderParams{
@@ -51,13 +61,25 @@ func marketOrderPlacer(c *client.Client) {
 	}
 }
 
+const userID = 8
 
+/*
+Basics of market making:
+- Market making is a strategy where a trader simultaneously places both buy and sell orders in an attempt to profit from the bid-ask spread.
+- The bid-ask spread is the difference between the highest price that a buyer is willing to pay for an asset and the lowest price that a seller is willing to accept.
+- real goal here is not the spread for lower market maker but the volume of trades.
+- Market makers provide liquidity to the market by placing orders on both sides of the order book, which helps ensure that there are always buyers and sellers available to trade.
+- Market making can be a profitable strategy if done correctly, but it also carries risks, such as the risk of losses if the market moves against the trader.
+
+*/
+
+// Liquidity provider
 func makeMarketSimple(clt *client.Client) {
 	ticker := time.NewTicker(tick)
 
 	for {
 
-		_, err := clt.GetOrders(8)
+		orders, err := clt.GetOrders(userID)
 		if err != nil {
 			log.Println(err)
 		}
@@ -79,7 +101,7 @@ func makeMarketSimple(clt *client.Client) {
 		fmt.Println("Exchange Spread => ", spread)
 
 		// Place the bids
-		if len(myBids) < maxOrders {
+		if len(orders.Bids) < maxOrders {
 			bidLimit := &client.PlaceOrderParams{
 				UserID: 8,
 				Bid:    true,
@@ -91,11 +113,10 @@ func makeMarketSimple(clt *client.Client) {
 			if err != nil {
 				log.Println(bidOrderResp.OrderID)
 			}
-			myBids[bidLimit.Price] = bidOrderResp.OrderID
 		}
 
 		// Place the asks
-		if len(myAsks) < maxOrders {
+		if len(orders.Asks) < maxOrders {
 			askLimit := &client.PlaceOrderParams{
 				UserID: 8,
 				Bid:    false,
@@ -107,7 +128,6 @@ func makeMarketSimple(clt *client.Client) {
 			if err != nil {
 				log.Println(askOrderResp.OrderID)
 			}
-			myAsks[askLimit.Price] = askOrderResp.OrderID
 		}
 
 
@@ -123,7 +143,7 @@ func seedMarket(c *client.Client) error {
 		UserID: 8,
 		Bid:    false,
 		Price:  10_000.0,
-		Size:   1_000_000.0,
+		Size:   2_000.0,
 	}
 	_, err := c.PlaceLimitOrder(ask)
 	if err != nil {
@@ -135,7 +155,7 @@ func seedMarket(c *client.Client) error {
 		UserID: 8,
 		Bid:    true,
 		Price:  9_000.0,
-		Size:   1_000_000.0,
+		Size:   2_000.0,
 	}
 	_, err = c.PlaceLimitOrder(bid)
 	if err != nil {
@@ -160,119 +180,8 @@ func main() {
 	go makeMarketSimple(clt)
 
 	time.Sleep(1 * time.Second)
+
 	marketOrderPlacer(clt)
-
-	// for {
-	// 	limitOrderParamsA := &client.PlaceOrderParams{
-	// 		UserID: 8,
-	// 		Bid:    false,
-	// 		Price:  10_000.0,
-	// 		Size:   5_000_000.0,
-	// 	}
-
-	// 	_, err := clt.PlaceLimitOrder(limitOrderParamsA)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	limitOrderParamsB := &client.PlaceOrderParams{
-	// 		UserID: 9,
-	// 		Bid:    false,
-	// 		Price:  9_000.0,
-	// 		Size:   500_000.0,
-	// 	}
-
-	// 	_, err = clt.PlaceLimitOrder(limitOrderParamsB)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	buyLimitOrder := &client.PlaceOrderParams{
-	// 		UserID: 7,
-	// 		Bid:    true,
-	// 		Price:  11_000.0,
-	// 		Size:   500_000.0,
-	// 	}
-	// 	_, err = clt.PlaceLimitOrder(buyLimitOrder)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	marketOrderParams := &client.PlaceOrderParams{
-	// 		UserID: 7,
-	// 		Bid:    true,
-	// 		Size:   1_000_000.0,
-	// 	}
-
-	// 	_, err = clt.PlaceMarketOrder(marketOrderParams)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// bestBidPrice, err := clt.GetBestBid()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("best bid price => ", bestBidPrice)
-
-	// bestAskPrice, err := clt.GetBestAsk()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("best ask price => ", bestAskPrice)
-
-	// 	time.Sleep(1 * time.Second)
-	// }
-
-
-
-	/********************************
-	* Place limit order bid and ask *
-	*********************************/
-	// Place a bid limit order
-	// bidParams := &client.PlaceOrderParams{
-	// 	UserID: 8,
-	// 	Bid:    true,
-	// 	Price:  10_000.0,
-	// 	Size:   1_000.0,
-	// }
-
-	// go func() {
-	// 	for  {
-	// 		resp, err := clt.PlaceLimitOrder(bidParams)
-
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-
-	// 		fmt.Println("order id => ", resp.OrderID)
-
-	// 		if err := clt.CancelOrder(resp.OrderID); err != nil {
-	// 			panic(err)
-	// 		}
-
-	// 		time.Sleep(1 * time.Second)
-	// 	}
-	// }()
-
-	// // Place an ask limit order
-	// askParams := &client.PlaceOrderParams{
-	// 	UserID: 8,
-	// 	Bid:    false,
-	// 	Price:  8_000.0,
-	// 	Size:   1_000.0,
-	// }
-
-	// for  {
-	// 	resp, err := clt.PlaceLimitOrder(askParams)
-
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	fmt.Println("order id => ", resp.OrderID)
-	// 	time.Sleep(1 * time.Second)
-	// }
 
 	select {}
 }

@@ -267,7 +267,6 @@ func (ob *Orderbook) clearLimit(bid bool, l *Limit) {
 		}
 	}
 
-	fmt.Printf("%+v\n", ob.asks)
 	fmt.Printf("Clearing limit  price level [%.2f] \n", l.Price)
 }
 

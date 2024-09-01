@@ -203,9 +203,13 @@ func (ex *Exchange) handleGetOrders(c echo.Context) error {
 		Bids: []Order{},
 	}
 
-	orders := make([]Order, len(orderbookOrders))
 
 	for i := 0; i < len(orderbookOrders); i++ {
+		// it could be that the order is getting filled even though it is included in this response
+		// We need to double check if the Limit is not nil
+		if orderbookOrders[i].Limit == nil {
+			continue
+		}
 		order := Order{
 			ID:    			orderbookOrders[i].ID,
 			UserID: 		orderbookOrders[i].UserID,
@@ -214,7 +218,7 @@ func (ex *Exchange) handleGetOrders(c echo.Context) error {
 			Timestamp: 	orderbookOrders[i].Timestamp,
 			Bid:       	orderbookOrders[i].Bid,
 		}
-		orders[i] = order
+
 		if order.Bid {
 			orderResp.Bids = append(orderResp.Bids, order)
 		} else {
