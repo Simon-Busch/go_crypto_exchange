@@ -81,6 +81,10 @@ type (
 		ID 						int64
 		PrivateKey 		*ecdsa.PrivateKey
 	}
+
+	APIError struct {
+		Error string
+	}
 )
 
 
@@ -130,6 +134,7 @@ func StartServer() {
 
 	e.POST("/order", ex.handlePlaceOrder)
 
+	e.GET("/trades/:market", ex.HandleGetTrades)
 	e.GET("/order/:userID", ex.handleGetOrders)
 	e.GET("/book/:market", ex.handleGetBook)
 	e.GET("/book/:market/bestbid", ex.handleGetBestBid)
@@ -187,6 +192,16 @@ func NewExchange(privateKey string, client *ethclient.Client) (*Exchange, error)
 type GetOrdersResponse struct {
 	Asks []Order
 	Bids []Order
+}
+
+func (ex *Exchange) HandleGetTrades(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob, ok := ex.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusBadRequest, APIError{Error:"market not found"})
+	}
+
+	return c.JSON(http.StatusOK, ob.Trades)
 }
 
 func (ex *Exchange) handleGetOrders(c echo.Context) error {

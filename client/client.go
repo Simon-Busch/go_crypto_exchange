@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	// "fmt"
 	"net/http"
 
 	"github.com/Simon-Busch/go_crypto_exchange/server"
+	"github.com/Simon-Busch/go_crypto_exchange/orderbook"
 )
 
 const Endpoint = "http://localhost:4000"
@@ -49,6 +49,26 @@ func (c *Client) GetBestBid() (float64, error) {
 	}
 
 	return bestBidPrice.Price, nil
+}
+
+func (c *Client) GetTrades(market string) ([]*orderbook.Trade, error) {
+	e := fmt.Sprintf("%s/trades/%s", Endpoint, market)
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	trades := []*orderbook.Trade{}
+	if err := json.NewDecoder(resp.Body).Decode(&trades); err != nil {
+		return nil, err
+	}
+
+	return trades, nil
 }
 
 func (c *Client) GetBestAsk() (float64, error) {
