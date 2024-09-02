@@ -19,14 +19,24 @@ var (
 )
 
 func marketOrderPlacer(c *client.Client) {
-	ticker := time.NewTicker(4 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 
 	for {
+
+		trades, err := c.GetTrades("ETH")
+		if err != nil {
+			panic(err)
+		}
+
+		if len(trades) > 0 {
+			fmt.Printf("Exchange price =====> %+v\n", trades[len(trades)-1].Price)
+		}
+
 		// Sell
 		marketSellOrder := &client.PlaceOrderParams{
-			UserID: 7,
+			UserID: 1,
 			Bid:    false,
-			Size:   100.0,
+			Size:   10.0,
 		}
 
 		orderResp, err := c.PlaceMarketOrder(marketSellOrder)
@@ -35,9 +45,9 @@ func marketOrderPlacer(c *client.Client) {
 		}
 
 		otherMarketSellOrder := &client.PlaceOrderParams{
-			UserID: 9,
+			UserID: 8,
 			Bid:    false,
-			Size:   100.0,
+			Size:   10.0,
 		}
 
 		orderResp, err = c.PlaceMarketOrder(otherMarketSellOrder)
@@ -47,9 +57,9 @@ func marketOrderPlacer(c *client.Client) {
 
 		// Buy
 		marketBuyOrder := &client.PlaceOrderParams{
-			UserID: 9,
+			UserID: 1,
 			Bid:    true,
-			Size:   800.0,
+			Size:   10.0,
 		}
 
 		marketOrderResp, err := c.PlaceMarketOrder(marketBuyOrder)
@@ -143,19 +153,18 @@ func seedMarket(c *client.Client) error {
 		UserID: 8,
 		Bid:    false,
 		Price:  10_000.0,
-		Size:   2_000.0,
+		Size:   100.0,
 	}
 	_, err := c.PlaceLimitOrder(ask)
 	if err != nil {
 		return err
 	}
 
-
 	bid := &client.PlaceOrderParams{
 		UserID: 8,
 		Bid:    true,
 		Price:  9_000.0,
-		Size:   2_000.0,
+		Size:   100.0,
 	}
 	_, err = c.PlaceLimitOrder(bid)
 	if err != nil {
@@ -177,9 +186,9 @@ func main() {
 		panic(err)
 	}
 
-	go makeMarketSimple(clt)
+	// go makeMarketSimple(clt)
 
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
 	marketOrderPlacer(clt)
 

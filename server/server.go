@@ -19,6 +19,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
+
 )
 
 
@@ -106,31 +108,16 @@ func StartServer() {
 
 	// Add a user 9
 	pk9 := "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
-	user9 := NewUser(pk9, 9)
-	ex.Users[user9.ID] = user9
-	addressStr9 := "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
-	balance9, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr9), nil)
-	fmt.Printf("User 9 - buyer - starting balance: %s\n", balance9)
-
 	// Add a user 8
 	pk8 := "dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"
-	user8 := NewUser(pk8, 8)
-	ex.Users[user8.ID] = user8
-	fmt.Printf("User 8: %+v\n", user8)
-	addressStr8 := "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
-	balance8, err := client.BalanceAt(context.Background(), common.HexToAddress(addressStr8), nil)
-	fmt.Printf("User 8  - seller - starting balance: %s\n", balance8)
-
-
-	// Add Bob
-	bobPK := "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
-	userBob := NewUser(bobPK, 7)
-	ex.Users[userBob.ID] = userBob
-	fmt.Printf("User Bob: %+v\n", userBob)
-
-	addressBob := "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
-	balanceBob, err := client.BalanceAt(context.Background(), common.HexToAddress(addressBob), nil)
-	fmt.Printf("User Bob- starting balance: %s\n", balanceBob)
+	// Add 1
+	pk1 := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	ex.registerUser(pk8, 8)
+	ex.registerUser(pk9, 9)
+	ex.registerUser(pk1, 1)
+	// address1 := "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	// balance1, err := client.BalanceAt(context.Background(), common.HexToAddress(address1), nil)
+	// fmt.Printf("User 1- starting balance: %s\n", balance1)
 
 	e.POST("/order", ex.handlePlaceOrder)
 
@@ -192,6 +179,17 @@ func NewExchange(privateKey string, client *ethclient.Client) (*Exchange, error)
 type GetOrdersResponse struct {
 	Asks []Order
 	Bids []Order
+}
+
+
+func (ex *Exchange) registerUser(pk string, userID int64) {
+	user := NewUser(pk, userID)
+	ex.Users[userID] = user
+
+	logrus.WithFields(logrus.Fields{
+		"userID": userID,
+		"address": crypto.PubkeyToAddress(user.PrivateKey.PublicKey),
+	}).Info("New exchange user")
 }
 
 func (ex *Exchange) HandleGetTrades(c echo.Context) error {
@@ -381,7 +379,13 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 
 	avgPrice := sumPrice / float64(len(matches))
 
-	log.Printf("filled MARKET order  => %d | size:[%.2f] | avg price [%.2f]", order.ID, totalSizeFilled, avgPrice)
+	// log.Printf("filled MARKET order  => %d | size:[%.2f] | avg price [%.2f]", order.ID, totalSizeFilled, avgPrice)
+
+	logrus.WithFields(logrus.Fields{
+		"type": 		order.Type(),
+		"size": 		totalSizeFilled,
+		"avgPrice": avgPrice,
+	}).Info("Filled market order")
 
 	newOrderMap := make(map[int64][]*orderbook.Order)
 
@@ -411,7 +415,7 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *o
 	ex.Orders[order.UserID] = append(ex.Orders[order.UserID], order)
 	ex.mu.Unlock()
 
-	log.Printf("new LIMIT order => type: [%t] || price[%.2f] || size [%.2f] || userID [%d]", order.Bid, order.Limit.Price, order.Size, order.UserID)
+	// log.Printf("new LIMIT order => type: [%t] || price[%.2f] || size [%.2f] || userID [%d]", order.Bid, order.Limit.Price, order.Size, order.UserID)
 
 	return nil
 }
