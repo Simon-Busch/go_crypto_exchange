@@ -111,7 +111,7 @@ func StartServer() {
 	// Add a user 8
 	pk8 := "dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"
 	// Add 1
-	pk1 := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	pk1 := "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 	ex.registerUser(pk8, 8)
 	ex.registerUser(pk9, 9)
 	ex.registerUser(pk1, 1)

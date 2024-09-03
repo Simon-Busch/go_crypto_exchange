@@ -21,6 +21,7 @@ type PlaceOrderParams struct {
 	UserID int64
 	Bid    bool
 	//Price only needed for placing LIMIT order
+	// For buy order, it will always be filled at the best price
 	Price  float64
 	Size   float64
 }
@@ -154,7 +155,7 @@ func (c *Client) PlaceLimitOrder(p *PlaceOrderParams) (*server.PlaceOrderRespons
 		return nil, err
 	}
 
-	e := Endpoint + "/order"
+	e := fmt.Sprintf("%s/order", Endpoint)
 	req, err := http.NewRequest(http.MethodPost, e, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
