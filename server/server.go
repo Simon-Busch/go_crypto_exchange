@@ -354,7 +354,6 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	totalSizeFilled := 0.0
 	sumPrice := 0.0
 	for i := 0 ; i < len(matches); i++ {
-
 		var (
 			match = matches[i]
 			limitUserID = match.Bid.UserID
@@ -378,8 +377,6 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	}
 
 	avgPrice := sumPrice / float64(len(matches))
-
-	// log.Printf("filled MARKET order  => %d | size:[%.2f] | avg price [%.2f]", order.ID, totalSizeFilled, avgPrice)
 
 	logrus.WithFields(logrus.Fields{
 		"type": 		order.Type(),
