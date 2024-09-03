@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/Simon-Busch/go_crypto_exchange/client"
@@ -18,15 +19,15 @@ func main() {
 	cfg := mm.Config{
 		UserID: 				9,
 		OrderSize: 			10,
-		MinSpread: 			100,
-		SeedOffset: 		400,
+		MinSpread: 			20, // ordersize * 2 would be good
+		SeedOffset: 		40,
 		ExchangeClient: clt,
 		MakeInterval: 	1 * time.Second,
+		PriceOffset: 		10,
 	}
 	maker := mm.NewMarketMaker(cfg)
 	maker.Start()
 
-	// go makeMarketSimple(clt)
 
 	time.Sleep(1 * time.Second)
 	go marketOrderPlacer(clt)
@@ -34,53 +35,23 @@ func main() {
 	select {}
 }
 
-// func makeMarketSimple(c *client.Client) {
-// 	ticker := time.NewTicker(1 * time.Second)
-
-// 	for {
-// 		bestAsk, err := c.GetBestAsk()
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		bestBid, err := c.GetBestBid()
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		if bestAsk == 0.0 && bestBid == 0.0 {
-// 			seedMarket(c)
-// 			continue
-// 		}
-
-// 		fmt.Printf("Best ask: %.2f\n", bestAsk)
-// 		fmt.Printf("Best bid: %.2f\n", bestBid)
-
-// 		<- ticker.C
-// 	}
-// }
-
 func marketOrderPlacer(c *client.Client) {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(200 * time.Millisecond)
 
 	for {
-		buyOrder := &client.PlaceOrderParams{
+		randomint := rand.Intn(10)
+		bid := true
+		if randomint > 3 { // The higher, more buying pressure -- price going up
+			bid = false
+		}
+
+		order := &client.PlaceOrderParams{
 			UserID: 1,
-			Bid: 		true,
+			Bid: 		bid,
 			Size:		1,
 		}
 
-		_, err := c.PlaceMarketOrder(buyOrder)
-		if err != nil {
-			panic(err)
-		}
-
-		sellOrder := &client.PlaceOrderParams{
-			UserID: 1,
-			Bid: 		false,
-			Size:		1,
-		}
-
-		_, err = c.PlaceMarketOrder(sellOrder)
+		_, err := c.PlaceMarketOrder(order)
 		if err != nil {
 			panic(err)
 		}
@@ -88,32 +59,3 @@ func marketOrderPlacer(c *client.Client) {
 		<- ticker.C
 	}
 }
-
-
-// const ethPrice = 2158.0
-// func seedMarket(c *client.Client) {
-// 	currentPrice := ethPrice // Should be an async call to get the current price
-// 	priceOffset := 100.0
-
-// 	bidOrder := &client.PlaceOrderParams{
-// 		UserID: 9,
-// 		Bid: 		true,
-// 		Price: 	currentPrice - priceOffset,
-// 		Size:		10,
-// 	}
-// 	_, err := c.PlaceLimitOrder(bidOrder)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	askOrder := &client.PlaceOrderParams{
-// 		UserID: 9,
-// 		Bid: 		false,
-// 		Price: 	currentPrice + priceOffset,
-// 		Size:		10,
-// 	}
-// 	_, err = c.PlaceLimitOrder(askOrder)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }

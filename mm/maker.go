@@ -14,6 +14,7 @@ type Config struct {
 	SeedOffset 			float64
 	ExchangeClient 	*client.Client
 	MakeInterval 		time.Duration
+	PriceOffset 		float64
 }
 
 type MarketMaker struct {
@@ -23,6 +24,7 @@ type MarketMaker struct {
 	seedOffset 			float64
 	exchangeClient 	*client.Client
 	makeInterval 		time.Duration
+	priceOffset 		float64
 }
 
 
@@ -34,6 +36,7 @@ func NewMarketMaker(cfc Config) *MarketMaker {
 		seedOffset: 		cfc.SeedOffset,
 		exchangeClient: cfc.ExchangeClient,
 		makeInterval: 	cfc.MakeInterval,
+		priceOffset: 		cfc.PriceOffset,
 	}
 }
 
@@ -43,6 +46,7 @@ func (mm *MarketMaker) Start() {
 		"orderSize": 		mm.orderSize,
 		"minSpread": 		mm.minSpread,
 		"makeInterval": mm.makeInterval,
+		"priceOffset": 	mm.priceOffset,
 	}).Info("Starting market maker")
 	go mm.makerLoop()
 }
@@ -50,7 +54,6 @@ func (mm *MarketMaker) Start() {
 func (mm *MarketMaker) makerLoop() {
 	ticker := time.NewTicker(mm.makeInterval)
 	for {
-
 		bestBid, err := mm.exchangeClient.GetBestBid()
 		if err != nil {
 			logrus.Error(err)
@@ -63,15 +66,54 @@ func (mm *MarketMaker) makerLoop() {
 			break;
 		}
 
-		if bestAsk == 0.0 && bestBid == 0.0 {
+		if bestAsk.Price == 0.0 && bestBid.Price == 0.0 {
 			if err := mm.seedMarket(); err != nil {
 				logrus.Error(err)
 				break;
 			}
+			continue
+		}
+
+		if bestBid.Price == 0.0 {
+			bestBid.Price = bestAsk.Price - mm.priceOffset * 2
+		}
+
+		if bestAsk.Price == 0.0 {
+			bestAsk.Price = bestBid.Price + mm.priceOffset * 2
+		}
+
+		spread := bestAsk.Price - bestBid.Price
+		if spread <= mm.minSpread {
+			continue
+		}
+
+		if err := mm.placeOrder(true, bestBid.Price + mm.priceOffset); err != nil {
+			logrus.Error(err)
+			break;
+		}
+
+		if err := mm.placeOrder(false, bestAsk.Price - mm.priceOffset); err != nil {
+			logrus.Error(err)
+			break;
 		}
 
 		<- ticker.C
 	}
+}
+
+func (mm *MarketMaker) placeOrder(bid bool, price float64) error {
+	bidOrder := &client.PlaceOrderParams{
+		UserID: 			mm.userID,
+		Bid: 					bid,
+		Size: 				mm.orderSize,
+		Price:				price,
+	}
+
+	_, err := mm.exchangeClient.PlaceLimitOrder(bidOrder)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (mm *MarketMaker) seedMarket() error {
